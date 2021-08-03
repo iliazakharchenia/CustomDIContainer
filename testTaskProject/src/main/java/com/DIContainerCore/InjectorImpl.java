@@ -12,11 +12,13 @@ import java.util.ArrayList;
 
 public class InjectorImpl implements Injector {
 
+    private ArrayList<Binding> bindinglist = new ArrayList<Binding>();
+
     @Override
     public <T> Provider<T> getProvider(Class<T> type) throws ConstructorNotFoundException,
                                                                 TooManyConstructorsException {
         if (hasMultipleInjections(type)) {
-            throw new TooManyConstructorsException(" Founded more than one constructor with @Inject ");
+            throw new TooManyConstructorsException("Founded more than one constructor with @Inject");
         }
 
         return null;
@@ -24,15 +26,15 @@ public class InjectorImpl implements Injector {
 
     @Override
     public <T> void bind(Class<T> intf, Class<? extends T> impl) {
-
+        Binding <T> binding = new Binding <T> (intf, impl, false);
+        bindinglist.add(binding);
     }
 
     @Override
     public <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
-
     }
 
-    private ArrayList<Annotation> getContructorsInjectAnnotations(Class injectedClass) {
+    private ArrayList<Annotation> getConstructorsInjectAnnotations(Class injectedClass) {
         Constructor<?>[] constructors = injectedClass.getConstructors();
         ArrayList<Annotation> annotations = new ArrayList<Annotation>();
         for (int i=0; i<constructors.length; i++) {
@@ -45,16 +47,16 @@ public class InjectorImpl implements Injector {
     }
 
     private boolean isNoSuchInjections(Class injectedClass) {
-        ArrayList<Annotation> annotations = getContructorsInjectAnnotations(injectedClass);
+        ArrayList<Annotation> annotations = getConstructorsInjectAnnotations(injectedClass);
 
         return annotations.size() == 0;
     }
 
     private boolean hasMultipleInjections(Class injectedClass) throws ConstructorNotFoundException {
         if (isNoSuchInjections(injectedClass)) {
-            throw new ConstructorNotFoundException(" No constructor with @Inject found ");
+            throw new ConstructorNotFoundException("No constructor with @Inject found");
         }
-        ArrayList<Annotation> annotations = getContructorsInjectAnnotations(injectedClass);
+        ArrayList<Annotation> annotations = getConstructorsInjectAnnotations(injectedClass);
 
         return annotations.size() > 1;
     }
