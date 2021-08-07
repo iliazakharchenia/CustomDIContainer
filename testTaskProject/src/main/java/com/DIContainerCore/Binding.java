@@ -22,4 +22,14 @@ public class Binding <T> {
         this.bindedClass = bindedClass;
         this.isSingleton = isSingleton;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        Binding binding = (Binding) o;
+        if (this.getBindedClass() == ((Binding) o).getBindedClass()
+                && this.getBindedInterface() == ((Binding) o).getBindedInterface()
+                && this.isSingleton() == ((Binding) o).isSingleton()) return true;
+
+        return false;
+    }
 }

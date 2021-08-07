@@ -1,6 +1,7 @@
 package com.DIContainerCore;
 
 import com.Annotations.Inject;
+import com.Exceptions.BindingAlreadyExistsException;
 import com.Exceptions.ConstructorNotFoundException;
 import com.Exceptions.TooManyConstructorsException;
 import com.Interfaces.Injector;
@@ -25,13 +26,31 @@ public class InjectorImpl implements Injector {
     }
 
     @Override
-    public <T> void bind(Class<T> intf, Class<? extends T> impl) {
+    public <T> void bind(Class<T> intf, Class<? extends T> impl) throws BindingAlreadyExistsException {
         Binding <T> binding = new Binding <T> (intf, impl, false);
-        bindinglist.add(binding);
+        if (!bindinglist.contains(binding)) {
+            bindinglist.add(binding);
+        }
+        else {
+            throw new BindingAlreadyExistsException("Such binding is already exists");
+        }
     }
 
     @Override
-    public <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
+    public <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) throws BindingAlreadyExistsException {
+        Binding <T> binding = new Binding <T> (intf, impl, true);
+        Binding <T> notSingletonBinding = new Binding <T>(intf, impl, false);
+        if (bindinglist.contains(binding)) {
+            throw new BindingAlreadyExistsException("Such binding is already exists");
+        }
+        else {
+            if (!bindinglist.contains(notSingletonBinding)) {
+                bindinglist.add(binding);
+            }
+            else {
+                throw new BindingAlreadyExistsException("Such not singleton binding is already exists");
+            }
+        }
     }
 
     private ArrayList<Annotation> getConstructorsInjectAnnotations(Class injectedClass) {
