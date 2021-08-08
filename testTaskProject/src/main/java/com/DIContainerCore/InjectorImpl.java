@@ -1,31 +1,57 @@
 package com.DIContainerCore;
 
 import com.Annotations.Inject;
-import com.Exceptions.BindingAlreadyExistsException;
-import com.Exceptions.ConstructorNotFoundException;
-import com.Exceptions.TooManyConstructorsException;
+import com.Exceptions.*;
 import com.Interfaces.Injector;
 import com.Interfaces.Provider;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 
 public class InjectorImpl implements Injector {
 
     private ArrayList<Binding> bindinglist = new ArrayList<Binding>();
+    private ArrayList<Object> singletonInstances = new ArrayList<Object>();
 
     @Override
     public <T> Provider<T> getProvider(Class<T> type) throws ConstructorNotFoundException,
-                                                                TooManyConstructorsException {
+            TooManyConstructorsException, BindingNotFoundException, IllegalAccessException, InvocationTargetException,
+                InstantiationException, ParameterIsNotReferenceTypeException {
         if (hasMultipleInjections(type)) {
             throw new TooManyConstructorsException("Founded more than one constructor with @Inject");
         }
+        Class[] parametersTypes = getTypeConstructorArgumentsTypes(type);
+        if (parametersTypes.length == 0) {
+            T instance = (T) getConstructorWithInjectAnnotation(type.getDeclaredConstructors()).newInstance();
+            ProviderImpl <T> provider = new ProviderImpl<T>(instance);
 
-        return null;
+            return provider;
+        }
+        ArrayList<Object> implementations = new ArrayList<Object>();
+        for (int i = 0; i < parametersTypes.length; i++) {
             if (parametersTypes[i].isPrimitive()) {
                 throw new ParameterIsNotReferenceTypeException("Parameter on position "+i+" is not Reference type");
             }
+            if (!isSuchBindingExists(parametersTypes[i])) {
+                throw new BindingNotFoundException("Binding not exist for this parameter type: " + parametersTypes[i]);
+            }
+            if (!isSingletonBindingExist(parametersTypes[i])) {
+                implementations.add(i, getRelatedClassForThisInterface(parametersTypes[i]).getDeclaredConstructors()[0].newInstance());
+            } else {
+                if (isSingletonInstanceExists(parametersTypes[i])) {
+                    implementations.add(i, singletonInstances.get(getIndexOfSingletonInstance(parametersTypes[i])));
+                } else {
+                    singletonInstances.add(getRelatedClassForThisInterface(parametersTypes[i]).getDeclaredConstructors()[0].newInstance());
+                    implementations.add(i, singletonInstances.get(singletonInstances.size()-1));
+                }
+            }
+        }
+        T instance = (T) getConstructorWithInjectAnnotation(type.getDeclaredConstructors()).newInstance(implementations.toArray());
+        ProviderImpl <T> provider = new ProviderImpl<T>(instance);
+
+        return provider;
     }
 
     @Override
@@ -59,8 +85,79 @@ public class InjectorImpl implements Injector {
         }
     }
 
-    private ArrayList<Annotation> getConstructorsInjectAnnotations(Class injectedClass) {
-        Constructor<?>[] constructors = injectedClass.getConstructors();
+    private int getIndexOfSingletonInstance(Class type) {
+        for (int i=0; i<singletonInstances.size(); i++) {
+            if (getRelatedClassForThisInterface(type) == singletonInstances.get(i).getClass()) return i;
+        }
+
+        return -1;
+    }
+
+    private Class getRelatedClassForThisInterface(Class type) {
+        for (int i = 0; i < bindinglist.size(); i++) {
+            if (bindinglist.get(i).getBindedInterface() == type) return bindinglist.get(i).getBindedClass();
+        }
+
+        return null;
+    }
+
+    private boolean isSingletonInstanceExists(Class type) {
+        if (singletonInstances.isEmpty()) {
+            return false;
+        }
+        ArrayList<Class> instances = new ArrayList<Class>();
+        Class singleton = null;
+        for (int i = 0; i < bindinglist.size(); i++) {
+            if (bindinglist.get(i).getBindedInterface() == type
+                    && bindinglist.get(i).isSingleton()) {
+                singleton = bindinglist.get(i).getBindedClass();
+                break;
+            }
+        }
+        for (int i = 0; i < singletonInstances.size(); i++) {
+            if (singletonInstances.get(i).getClass() == singleton) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Constructor getConstructorWithInjectAnnotation(Constructor[] constructors) {
+        for (int i = 0; i < constructors.length; i++) {
+            if (constructors[i].getAnnotation(Inject.class) != null) {
+                return constructors[i];
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isSingletonBindingExist(Class type) {
+        boolean isSingleton = false;
+        for (int i = 0; i < bindinglist.size(); i++) {
+            if (bindinglist.get(i).getBindedInterface() == type
+                    && bindinglist.get(i).isSingleton()) {
+                isSingleton = true;
+            }
+        }
+
+        return isSingleton;
+    }
+
+    private boolean isSuchBindingExists(Class type) {
+        boolean isSuchBindingExist = false;
+        for (int i = 0; i < bindinglist.size(); i++) {
+            if (bindinglist.get(i).getBindedInterface() == type) {
+                isSuchBindingExist = true;
+            }
+        }
+
+        return isSuchBindingExist;
+    }
+
+    private ArrayList<Annotation> getConstructorsWithInjectAnnotations(Class injectedClass) {
+        Constructor<?>[] constructors = injectedClass.getDeclaredConstructors();
         ArrayList<Annotation> annotations = new ArrayList<Annotation>();
         for (int i=0; i<constructors.length; i++) {
             if (constructors[i].getAnnotation(Inject.class) != null) {
@@ -71,8 +168,16 @@ public class InjectorImpl implements Injector {
         return annotations;
     }
 
+    private <T> Class[] getTypeConstructorArgumentsTypes(Class<T> type) {
+        Constructor<?>[] constructors = type.getDeclaredConstructors();
+        Constructor constructor = getConstructorWithInjectAnnotation(constructors);
+        Class[] parameterTypes = constructor.getParameterTypes();
+
+        return parameterTypes;
+    }
+
     private boolean isNoSuchInjections(Class injectedClass) {
-        ArrayList<Annotation> annotations = getConstructorsInjectAnnotations(injectedClass);
+        ArrayList<Annotation> annotations = getConstructorsWithInjectAnnotations(injectedClass);
 
         return annotations.size() == 0;
     }
@@ -81,7 +186,7 @@ public class InjectorImpl implements Injector {
         if (isNoSuchInjections(injectedClass)) {
             throw new ConstructorNotFoundException("No constructor with @Inject found");
         }
-        ArrayList<Annotation> annotations = getConstructorsInjectAnnotations(injectedClass);
+        ArrayList<Annotation> annotations = getConstructorsWithInjectAnnotations(injectedClass);
 
         return annotations.size() > 1;
     }
