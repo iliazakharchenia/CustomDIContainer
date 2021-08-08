@@ -23,6 +23,9 @@ public class InjectorImpl implements Injector {
         }
 
         return null;
+            if (parametersTypes[i].isPrimitive()) {
+                throw new ParameterIsNotReferenceTypeException("Parameter on position "+i+" is not Reference type");
+            }
     }
 
     @Override
