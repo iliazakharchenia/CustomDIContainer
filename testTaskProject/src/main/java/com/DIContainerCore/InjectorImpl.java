@@ -31,10 +31,13 @@ public class InjectorImpl implements Injector {
     @Override
     public <T> void bind(Class<T> intf, Class<? extends T> impl) throws BindingAlreadyExistsException {
         Binding <T> binding = new Binding <T> (intf, impl, false);
+        Binding <T> singletonBinding = new Binding <T> (intf, impl, true);
         if (!bindinglist.contains(binding)) {
+            if (bindinglist.contains(singletonBinding)) {
+                throw new BindingAlreadyExistsException("Such singleton binding is already exists");
+            }
             bindinglist.add(binding);
-        }
-        else {
+        } else {
             throw new BindingAlreadyExistsException("Such binding is already exists");
         }
     }
