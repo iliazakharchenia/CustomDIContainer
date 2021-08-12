@@ -1,4 +1,4 @@
-package com.Annotations;
+package com.dic.injector;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

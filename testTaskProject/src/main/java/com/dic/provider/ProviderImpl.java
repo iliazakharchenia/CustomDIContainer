@@ -1,11 +1,10 @@
-package com.DIContainerCore;
-
-import com.Interfaces.Provider;
+package com.dic.provider;
 
 public class ProviderImpl <T> implements Provider {
+
     private T instance;
 
-    ProviderImpl (T instance) {
+    public ProviderImpl(T instance) {
         this.instance = instance;
     }
 

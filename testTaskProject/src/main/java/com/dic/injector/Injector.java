@@ -1,6 +1,7 @@
-package com.Interfaces;
+package com.dic.injector;
 
-import com.Exceptions.*;
+import com.dic.provider.Provider;
+import com.dic.exception.*;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -8,7 +9,7 @@ public interface Injector {
 
     <T> Provider<T> getProvider(Class<T> type) throws ConstructorNotFoundException, TooManyConstructorsException,
             BindingNotFoundException, IllegalAccessException, InvocationTargetException, InstantiationException,
-                ParameterIsNotReferenceTypeException;
+            ParameterIsNotReferenceTypeException;
 
     <T> void bind(Class<T> intf, Class<? extends T> impl) throws BindingAlreadyExistsException;
 

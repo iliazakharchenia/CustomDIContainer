@@ -1,9 +1,9 @@
-package com.DIContainerCore;
+package com.dic.injector;
 
-import com.Annotations.Inject;
-import com.Exceptions.*;
-import com.Interfaces.Injector;
-import com.Interfaces.Provider;
+import com.dic.binding.Binding;
+import com.dic.provider.ProviderImpl;
+import com.dic.exception.*;
+import com.dic.provider.Provider;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -16,16 +16,15 @@ public class InjectorImpl implements Injector {
     private ArrayList<Object> singletonInstances = new ArrayList<Object>();
 
     @Override
-    public <T> Provider<T> getProvider(Class<T> type) throws ConstructorNotFoundException,
-            TooManyConstructorsException, BindingNotFoundException, IllegalAccessException, InvocationTargetException,
-                InstantiationException, ParameterIsNotReferenceTypeException {
+    public <T> Provider<T> getProvider(Class<T> type) throws IllegalAccessException,
+            InvocationTargetException, InstantiationException {
         if (hasMultipleInjections(type)) {
             throw new TooManyConstructorsException("Founded more than one constructor with @Inject");
         }
         Class[] parametersTypes = getTypeConstructorArgumentsTypes(type);
         if (parametersTypes.length == 0) {
             T instance = (T) getConstructorWithInjectAnnotation(type.getDeclaredConstructors()).newInstance();
-            ProviderImpl <T> provider = new ProviderImpl<T>(instance);
+            ProviderImpl<T> provider = new ProviderImpl<T>(instance);
 
             return provider;
         }
@@ -55,7 +54,7 @@ public class InjectorImpl implements Injector {
     }
 
     @Override
-    public <T> void bind(Class<T> intf, Class<? extends T> impl) throws BindingAlreadyExistsException {
+    public <T> void bind(Class<T> intf, Class<? extends T> impl) {
         Binding <T> binding = new Binding <T> (intf, impl, false);
         Binding <T> singletonBinding = new Binding <T> (intf, impl, true);
         if (!bindinglist.contains(binding)) {
@@ -69,7 +68,7 @@ public class InjectorImpl implements Injector {
     }
 
     @Override
-    public <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) throws BindingAlreadyExistsException {
+    public <T> void bindSingleton(Class<T> intf, Class<? extends T> impl) {
         Binding <T> binding = new Binding <T> (intf, impl, true);
         Binding <T> notSingletonBinding = new Binding <T>(intf, impl, false);
         if (bindinglist.contains(binding)) {
@@ -182,7 +181,7 @@ public class InjectorImpl implements Injector {
         return annotations.size() == 0;
     }
 
-    private boolean hasMultipleInjections(Class injectedClass) throws ConstructorNotFoundException {
+    private boolean hasMultipleInjections(Class injectedClass) {
         if (isNoSuchInjections(injectedClass)) {
             throw new ConstructorNotFoundException("No constructor with @Inject found");
         }

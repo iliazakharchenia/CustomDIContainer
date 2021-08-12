@@ -1,6 +1,7 @@
-package com.DIContainerCore;
+package com.dic.binding;
 
 public class Binding <T> {
+
     private Class <T> bindedInterface;
     private Class <? extends T> bindedClass;
     private boolean isSingleton;
@@ -17,7 +18,7 @@ public class Binding <T> {
         return isSingleton;
     }
 
-    Binding (Class<T> bindedInterface, Class<? extends T> bindedClass, boolean isSingleton) {
+    public Binding(Class<T> bindedInterface, Class<? extends T> bindedClass, boolean isSingleton) {
         this.bindedInterface = bindedInterface;
         this.bindedClass = bindedClass;
         this.isSingleton = isSingleton;
